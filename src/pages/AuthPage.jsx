@@ -66,7 +66,7 @@ export default function AuthPage({ mode }) {
             {isLogin ? 'Bienvenido de vuelta' : 'Crear tu cuenta'}
           </h1>
           <p style={{ fontSize: 13, color: X.t2, marginBottom: 24 }}>
-            {isLogin ? 'Ingresá para acceder a tu dashboard.' : '30 días de acceso completo gratis.'}
+            {isLogin ? 'Ingresá para acceder a tu dashboard.' : '7 días de acceso completo gratis.'}
           </p>
 
           {/* Tab switcher */}
@@ -114,7 +114,7 @@ export default function AuthPage({ mode }) {
           {!isLogin && (
             <p style={{ fontSize: 11, color: X.t3, textAlign: "center", marginTop: 14, lineHeight: 1.6 }}>
               Al registrarte aceptás los términos de uso.<br />
-              <span style={{ color: X.grn, fontWeight: 600 }}>30 días gratis · Luego USD 15/mes</span>
+              <span style={{ color: X.grn, fontWeight: 600 }}>7 días gratis · Luego USD 15/mes</span>
             </p>
           )}
         </div>

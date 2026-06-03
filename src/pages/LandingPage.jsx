@@ -48,7 +48,7 @@ const FEATURES = [
 const STATS = [
   { value: "8+", label: "Salas de chat" },
   { value: "16+", label: "Pares monitoreados" },
-  { value: "30", label: "Días de prueba gratis" },
+  { value: "7", label: "Días de prueba gratis" },
   { value: "2s", label: "Actualización de precios" }
 ]
 
@@ -92,7 +92,7 @@ export default function LandingPage() {
 
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 20, border: "1px solid " + X.acc + "44", background: X.acc + "10", marginBottom: 24 }}>
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: X.grn, animation: "glow 1.5s ease-in-out infinite" }} />
-          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: X.acc, fontWeight: 600 }}>30 días gratis · Sin tarjeta de crédito</span>
+          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: X.acc, fontWeight: 600 }}>7 días gratis · Sin tarjeta de crédito</span>
         </div>
 
         <h1 style={{ fontWeight: 900, fontSize: "clamp(36px,6vw,64px)", letterSpacing: "-0.03em", lineHeight: 1.1, marginBottom: 20, position: "relative" }}>
@@ -160,7 +160,7 @@ export default function LandingPage() {
       <section style={{ padding: "0 24px 80px", maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 48 }}>
           <h2 style={{ fontWeight: 800, fontSize: "clamp(24px,4vw,40px)", letterSpacing: "-0.02em", marginBottom: 12, color: X.t1 }}>Todo lo que necesitás en un solo lugar</h2>
-          <p style={{ color: X.t2, fontSize: 15 }}>Acceso completo durante 30 días. Luego USD 15/mes.</p>
+          <p style={{ color: X.t2, fontSize: 15 }}>Acceso completo durante 7 días. Luego USD 15/mes.</p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 14 }}>
           {FEATURES.map((f) => (
@@ -182,7 +182,7 @@ export default function LandingPage() {
             <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 48, fontWeight: 800, color: X.t1 }}>USD 15</span>
             <span style={{ fontSize: 16, color: X.t3 }}>/mes</span>
           </div>
-          <div style={{ fontSize: 13, color: X.grn, marginBottom: 28, fontWeight: 600 }}>30 días gratis incluidos</div>
+          <div style={{ fontSize: 13, color: X.grn, marginBottom: 28, fontWeight: 600 }}>7 días gratis incluidos</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28, textAlign: "left" }}>
             {["Todos los mercados en tiempo real", "Chat con inversores (8 salas)", "FinMatch — red de inversores", "Feed premium de noticias", "Análisis y recomendaciones PRO", "Terminal financiero CLI"].map((item) => (
               <div key={item} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: X.t2 }}>

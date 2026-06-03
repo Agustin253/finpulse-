@@ -33,7 +33,7 @@ export default function TrialExpired() {
     )
   }
 
-  const trialEndDate = profile?.trial_start ? new Date(new Date(profile.trial_start).setDate(new Date(profile.trial_start).getDate() + 30)) : new Date()
+  const trialEndDate = profile?.trial_start ? new Date(new Date(profile.trial_start).setDate(new Date(profile.trial_start).getDate() + 7)) : new Date()
 
   return (
     <div style={{ background: X.bg, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Outfit',sans-serif" }}>
@@ -52,7 +52,7 @@ export default function TrialExpired() {
           <div style={{ fontSize: 52, marginBottom: 16 }}>⏳</div>
           <h1 style={{ fontWeight: 800, fontSize: 24, color: X.t1, marginBottom: 8 }}>Tu prueba gratuita terminó</h1>
           <p style={{ color: X.t2, fontSize: 14, lineHeight: 1.7, marginBottom: 6 }}>
-            Tu período de 30 días venció el <span style={{ color: X.t1, fontWeight: 600 }}>{trialEndDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>.
+            Tu período de 7 días venció el <span style={{ color: X.t1, fontWeight: 600 }}>{trialEndDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>.
           </p>
           <p style={{ color: X.t2, fontSize: 13, marginBottom: 28 }}>
             Suscribite para seguir accediendo a todos los mercados, chat y más.
