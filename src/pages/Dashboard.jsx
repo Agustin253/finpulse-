@@ -44,11 +44,11 @@ const CRYPTO_MAP = {
 
 const RSS_SOURCES = [
   { url: "https://www.ambito.com/rss/pages/economia.xml", cat: "Argentina", src: "Ámbito" },
-  { url: "https://www.infobae.com/feeds/rss/economia.xml", cat: "Macro", src: "Infobae" },
   { url: "https://www.coindesk.com/arc/outboundfeeds/rss/", cat: "Crypto", src: "CoinDesk" },
-  { url: "https://www.cronista.com/rss/ultimas-noticias/", cat: "Mercados", src: "El Cronista" },
-  { url: "https://www.iproup.com/rss/economia-online/", cat: "Argentina", src: "iProUP" },
-  { url: "https://es.cointelegraph.com/rss", cat: "Crypto", src: "CoinTelegraph" }
+  { url: "https://es.cointelegraph.com/rss", cat: "Crypto", src: "CoinTelegraph ES" },
+  { url: "https://www.cronista.com/rss/finanzas-y-mercados/", cat: "Mercados", src: "El Cronista" },
+  { url: "https://www.iproup.com/rss/economia-online/", cat: "Macro", src: "iProUP" },
+  { url: "https://www.infotechnology.com/rss/", cat: "Startups", src: "Infotechnology" }
 ];
 
 function relativeTime(ms) {
