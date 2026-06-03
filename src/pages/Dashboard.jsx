@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../supabase";
 
 /* ═══ DATA ═══ */
 const CURRENCIES = [
@@ -73,31 +74,6 @@ const CHAT_ROOMS = [
   { id: "macro", name: "Macro & Economía", icon: "🌐", desc: "Política monetaria, inflación", users: 167, color: "#a78bfa" }
 ];
 
-const ROOM_MESSAGES = {
-  crypto: [
-    { user: "CryptoWolf", av: "CW", msg: "BTC rompió resistencia de 68K, target 72K", t: "14:32", online: true },
-    { user: "DeFiMaster", av: "DM", msg: "TVL de Aave subió 15% esta semana", t: "14:35", online: true },
-    { user: "SatoshiFan", av: "SF", msg: "ETH/BTC ratio interesante para rotar", t: "14:38", online: false },
-    { user: "BlockTrader", av: "BT", msg: "Cuidado funding rate muy positivo", t: "14:41", online: true }
-  ],
-  forex: [
-    { user: "FXPro", av: "FP", msg: "EUR/USD testeando 1.085, puede ir a 1.092", t: "14:30", online: true },
-    { user: "CarryKing", av: "CK", msg: "Yen sigue débil. USD/JPY camino a 160?", t: "14:33", online: true }
-  ],
-  acciones: [
-    { user: "ValueHunter", av: "VH", msg: "NVIDIA earnings la semana que viene", t: "14:28", online: true },
-    { user: "DividendKing", av: "DK", msg: "CEDEARs de MSFT buen momento", t: "14:32", online: true }
-  ],
-  argentina: [
-    { user: "MervalBull", av: "MB", msg: "YPF volando! ADRs argentinos on fire", t: "14:25", online: true },
-    { user: "BondTrader", av: "BT", msg: "GD30 rindiendo 15%. Atractivo vs Treasuries?", t: "14:30", online: false },
-    { user: "FinanceBA", av: "FB", msg: "BCRA compró USD 200M hoy", t: "14:35", online: true }
-  ],
-  commodities: [{ user: "GoldBug", av: "GB", msg: "Oro en máximos, bancos centrales comprando", t: "14:20", online: true }],
-  realestate: [{ user: "PropDev", av: "PD", msg: "Nuevo proyecto tokenizado en Palermo, 12% anual", t: "14:15", online: true }],
-  startups: [{ user: "VCLatam", av: "VL", msg: "Ronda de USD 5M en fintech colombiana", t: "14:22", online: true }],
-  macro: [{ user: "EconGuru", av: "EG", msg: "Fed dovish, recortes en septiembre casi seguros", t: "14:18", online: true }]
-};
 
 const RECOMMENDATIONS = [
   { id: 1, type: "buy", asset: "YPF (YPFD)", reason: "Sector energético argentino en expansión. Resultados Q1 +23%. Target: +35% a 12 meses.", risk: "Moderado", sector: "Energía", timeframe: "12 meses", potential: "+35%", color: "#10b981" },
@@ -322,36 +298,76 @@ function ProfilePage({ userName, userEmail, trialDaysLeft, isSubscribed }) {
 }
 
 /* ═══ CHAT VIEW ═══ */
-function ChatView({ prices, cryptoPrices }) {
+function ChatView() {
+  const { user, profile } = useAuth();
   const [activeRoom, setActiveRoom] = useState(null);
-  const [messages, setMessages] = useState({});
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const chatEnd = useRef(null);
+  const channelRef = useRef(null);
+
+  const username = profile?.full_name || user?.email?.split("@")[0] || "Anonymous";
 
   useEffect(() => {
-    const init = {};
-    Object.keys(ROOM_MESSAGES).forEach((k) => { init[k] = [...ROOM_MESSAGES[k]]; });
-    CHAT_ROOMS.forEach((r) => { if (!init[r.id]) init[r.id] = []; });
-    setMessages(init);
-  }, []);
+    if (!activeRoom) {
+      setMessages([]);
+      return;
+    }
 
-  useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, activeRoom]);
+    let channel;
 
-  const sendMsg = () => {
-    if (!input.trim() || !activeRoom) return;
-    const now = new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-    setMessages((p) => ({ ...p, [activeRoom]: [...(p[activeRoom] || []), { user: "Vos", av: "YO", msg: input.trim(), t: now, online: true }] }));
+    async function loadAndSubscribe() {
+      setLoading(true);
+      setMessages([]);
+
+      const { data } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("room_id", activeRoom)
+        .order("created_at", { ascending: true })
+        .limit(50);
+
+      if (data) setMessages(data);
+      setLoading(false);
+
+      channel = supabase
+        .channel("room:" + activeRoom)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "messages", filter: `room_id=eq.${activeRoom}` },
+          (payload) => { setMessages((prev) => [...prev, payload.new]); }
+        )
+        .subscribe();
+
+      channelRef.current = channel;
+    }
+
+    loadAndSubscribe();
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [activeRoom]);
+
+  useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  const sendMsg = async () => {
+    if (!input.trim() || !activeRoom || !user) return;
+    const text = input.trim();
     setInput("");
-    setTimeout(() => {
-      const reps = ["Interesante! 👍", "De acuerdo", "Alguien tiene más data?", "Buen punto", "Yo opino similar"];
-      const names = ["TraderPro", "InvestorX", "MarketGuru", "AlphaSeeker"];
-      const n = names[Math.floor(Math.random() * names.length)];
-      setMessages((p) => ({ ...p, [activeRoom]: [...(p[activeRoom] || []), { user: n, av: n.substring(0, 2).toUpperCase(), msg: reps[Math.floor(Math.random() * reps.length)], t: new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }), online: true }] }));
-    }, 1200 + Math.random() * 2000);
+    await supabase.from("messages").insert({
+      room_id: activeRoom,
+      user_id: user.id,
+      username,
+      content: text,
+    });
   };
 
   const activeRoomData = CHAT_ROOMS.find((r) => r.id === activeRoom);
-  const roomMsgs = messages[activeRoom] || [];
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: activeRoom ? "260px 1fr" : "1fr", gap: 0, background: X.bg2, borderRadius: 14, border: "1px solid " + X.brd, overflow: "hidden", height: "calc(100vh - 230px)", minHeight: 480 }}>
@@ -389,19 +405,23 @@ function ChatView({ prices, cryptoPrices }) {
             </div>
           </div>
           <div style={{ flex: 1, overflow: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-            {roomMsgs.map((m, i) => {
-              const isMe = m.user === "Vos";
+            {loading && <div style={{ textAlign: "center", color: X.t3, fontSize: 12, padding: 20 }}>Cargando mensajes...</div>}
+            {!loading && messages.length === 0 && <div style={{ textAlign: "center", color: X.t3, fontSize: 12, padding: 20 }}>Sé el primero en escribir en esta sala.</div>}
+            {messages.map((m) => {
+              const isMe = m.user_id === user?.id;
+              const av = (m.username || "??").substring(0, 2).toUpperCase();
+              const timeStr = new Date(m.created_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
               return (
-                <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", flexDirection: isMe ? "row-reverse" : "row" }}>
+                <div key={m.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", flexDirection: isMe ? "row-reverse" : "row" }}>
                   <div style={{ width: 30, height: 30, borderRadius: "50%", background: isMe ? "linear-gradient(135deg," + X.acc + ",#f97316)" : "linear-gradient(135deg," + X.pur + "," + X.cyn + ")", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Outfit',sans-serif", fontSize: 10, fontWeight: 700, color: isMe ? "#000" : "#fff", flexShrink: 0 }}>
-                    {m.av}
+                    {av}
                   </div>
                   <div style={{ maxWidth: "70%" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2, flexDirection: isMe ? "row-reverse" : "row" }}>
-                      <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 10, fontWeight: 600, color: isMe ? X.acc : X.t2 }}>{m.user}</span>
-                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: X.t3 }}>{m.t}</span>
+                      <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 10, fontWeight: 600, color: isMe ? X.acc : X.t2 }}>{m.username}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: X.t3 }}>{timeStr}</span>
                     </div>
-                    <div style={{ padding: "8px 12px", borderRadius: 10, background: isMe ? X.acc + "22" : X.bg3, fontFamily: "'Outfit',sans-serif", fontSize: 12, color: X.t1, lineHeight: 1.5, borderTopRightRadius: isMe ? 3 : 10, borderTopLeftRadius: isMe ? 10 : 3 }}>{m.msg}</div>
+                    <div style={{ padding: "8px 12px", borderRadius: 10, background: isMe ? X.acc + "22" : X.bg3, fontFamily: "'Outfit',sans-serif", fontSize: 12, color: X.t1, lineHeight: 1.5, borderTopRightRadius: isMe ? 3 : 10, borderTopLeftRadius: isMe ? 10 : 3 }}>{m.content}</div>
                   </div>
                 </div>
               );
@@ -865,7 +885,7 @@ export default function Dashboard() {
         )}
 
         {/* CHAT */}
-        {view === "chat" && <ChatView prices={prices} cryptoPrices={cryptoPrices} />}
+        {view === "chat" && <ChatView />}
 
         {/* PROFILE */}
         {view === "profile" && (
