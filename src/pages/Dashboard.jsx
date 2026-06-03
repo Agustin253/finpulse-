@@ -45,10 +45,9 @@ const CRYPTO_MAP = {
 const RSS_SOURCES = [
   { url: "https://www.ambito.com/rss/pages/economia.xml", cat: "Argentina", src: "Ámbito" },
   { url: "https://www.coindesk.com/arc/outboundfeeds/rss/", cat: "Crypto", src: "CoinDesk" },
-  { url: "https://es.cointelegraph.com/rss", cat: "Crypto", src: "CoinTelegraph ES" },
-  { url: "https://www.cronista.com/rss/finanzas-y-mercados/", cat: "Mercados", src: "El Cronista" },
-  { url: "https://www.iproup.com/rss/economia-online/", cat: "Macro", src: "iProUP" },
-  { url: "https://www.infotechnology.com/rss/", cat: "Startups", src: "Infotechnology" }
+  { url: "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/economia/portada", cat: "Macro", src: "El País" },
+  { url: "https://www.lanacion.com.ar/arc/outboundfeeds/rss/category/economia/", cat: "Mercados", src: "La Nación" },
+  { url: "https://www.clarin.com/rss/economia/", cat: "Mercados", src: "Clarín" }
 ];
 
 function relativeTime(ms) {
@@ -62,23 +61,19 @@ async function fetchNewsFeed() {
   const results = await Promise.all(
     RSS_SOURCES.map(async (source) => {
       try {
-        const proxyUrl = "/api/rss?url=" + encodeURIComponent(source.url);
+        const proxyUrl = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(source.url);
         const res = await fetch(proxyUrl);
         if (!res.ok) return [];
-        const xml = await res.text();
-        const doc = new DOMParser().parseFromString(xml, "application/xml");
-        const items = Array.from(doc.querySelectorAll("item"));
-        return items.map((item) => {
-          const title = item.querySelector("title")?.textContent?.trim() || "";
-          const link = item.querySelector("link")?.textContent?.trim() || "";
-          const pubDate = item.querySelector("pubDate")?.textContent?.trim() || "";
+        const json = await res.json();
+        if (json.status !== "ok") return [];
+        return json.items.map((item) => {
           return {
             cat: source.cat,
-            title,
+            title: item.title || "",
             premium: false,
             src: source.src,
-            url: link,
-            pubDate: new Date(pubDate).getTime() || 0
+            url: item.link || "",
+            pubDate: new Date(item.pubDate).getTime() || 0
           };
         });
       } catch {
