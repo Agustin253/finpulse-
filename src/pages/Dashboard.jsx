@@ -47,7 +47,9 @@ const RSS_SOURCES = [
   { url: "https://www.coindesk.com/arc/outboundfeeds/rss/", cat: "Crypto", src: "CoinDesk" },
   { url: "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/economia/portada", cat: "Macro", src: "El País" },
   { url: "https://www.lanacion.com.ar/arc/outboundfeeds/rss/category/economia/", cat: "Mercados", src: "La Nación" },
-  { url: "https://www.clarin.com/rss/economia/", cat: "Mercados", src: "Clarín" }
+  { url: "https://www.clarin.com/rss/economia/", cat: "Mercados", src: "Clarín" },
+  { url: "https://www.fxstreet.com/rss/news", cat: "FX", src: "FXStreet" },
+  { url: "https://feeds.feedburner.com/TechCrunch", cat: "Startups", src: "TechCrunch" }
 ];
 
 function relativeTime(ms) {
