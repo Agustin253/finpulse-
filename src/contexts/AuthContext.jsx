@@ -25,7 +25,26 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function loadProfile(userId) {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+    setLoading(true)
+    let { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+
+    if (!data) {
+      // Profile missing — create it now so trial_start is always set
+      const { data: created } = await supabase
+        .from('profiles')
+        .upsert({ id: userId, trial_start: new Date().toISOString() })
+        .select()
+        .single()
+      data = created
+    }
+
+    if (data?.trial_start) {
+      const end = new Date(data.trial_start)
+      end.setDate(end.getDate() + 30)
+      const daysLeft = Math.max(0, Math.ceil((end - new Date()) / 86400000))
+      console.log('[FinPulse] trial_start:', data.trial_start, '| days left:', daysLeft)
+    }
+
     setProfile(data)
     setLoading(false)
   }
@@ -34,12 +53,21 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
     if (data.user) {
-      await supabase.from('profiles').upsert({
-        id: data.user.id,
-        email,
-        full_name: fullName,
-        trial_start: new Date().toISOString()
-      })
+      const { data: newProfile } = await supabase
+        .from('profiles')
+        .upsert({
+          id: data.user.id,
+          email,
+          full_name: fullName,
+          trial_start: new Date().toISOString()
+        })
+        .select()
+        .single()
+      // Set profile immediately so onAuthStateChange's loadProfile call finds it already cached
+      if (newProfile) {
+        console.log('[FinPulse] profile created on signup, trial_start:', newProfile.trial_start)
+        setProfile(newProfile)
+      }
     }
     return data
   }
