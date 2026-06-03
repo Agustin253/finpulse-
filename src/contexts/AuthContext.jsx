@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
 
     if (data?.trial_start) {
       const end = new Date(data.trial_start)
-      end.setDate(end.getDate() + 30)
+      end.setDate(end.getDate() + 7)
       const daysLeft = Math.max(0, Math.ceil((end - new Date()) / 86400000))
       console.log('[FinPulse] trial_start:', data.trial_start, '| days left:', daysLeft)
     }
@@ -93,14 +93,14 @@ export function AuthProvider({ children }) {
     if (profile.is_subscribed) return true
     if (!profile.trial_start) return false
     const end = new Date(profile.trial_start)
-    end.setDate(end.getDate() + 30)
+    end.setDate(end.getDate() + 7)
     return new Date() < end
   }
 
   function trialDaysLeft() {
-    if (!profile?.trial_start || profile?.is_subscribed) return 30
+    if (!profile?.trial_start || profile?.is_subscribed) return 7
     const end = new Date(profile.trial_start)
-    end.setDate(end.getDate() + 30)
+    end.setDate(end.getDate() + 7)
     return Math.max(0, Math.ceil((end - new Date()) / 86400000))
   }
 
