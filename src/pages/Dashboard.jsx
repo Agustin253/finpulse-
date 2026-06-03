@@ -42,18 +42,51 @@ const CRYPTO_MAP = {
   "avalanche-2": { symbol: "AVAX", name: "Avalanche" }
 };
 
-const NEWS_FEED = [
-  { id: 1, cat: "Mercados", title: "Wall Street cierra en máximos históricos impulsado por tecnológicas", time: "2 min", premium: false, src: "Reuters" },
-  { id: 2, cat: "Crypto", title: "Bitcoin supera los USD 68.000 tras aprobación de nuevos ETFs spot", time: "5 min", premium: false, src: "CoinDesk" },
-  { id: 3, cat: "Argentina", title: "El Merval acumula su quinta semana consecutiva de ganancias", time: "8 min", premium: false, src: "Ámbito" },
-  { id: 4, cat: "Análisis", title: "¿Es momento de invertir en bonos soberanos? Análisis técnico completo", time: "12 min", premium: true, src: "FinPulse Research" },
-  { id: 5, cat: "Commodities", title: "El oro alcanza nuevos récords ante la incertidumbre geopolítica", time: "15 min", premium: false, src: "Bloomberg" },
-  { id: 6, cat: "FX", title: "El peso argentino se estabiliza: el blue retrocede frente al oficial", time: "18 min", premium: false, src: "Infobae" },
-  { id: 7, cat: "Oportunidades", title: "5 acciones del sector energético con potencial de 40% en 12 meses", time: "22 min", premium: true, src: "FinPulse Research" },
-  { id: 8, cat: "Macro", title: "Fed mantiene tasas: Powell señala posibles recortes", time: "25 min", premium: false, src: "CNBC" },
-  { id: 9, cat: "Real Estate", title: "Oportunidades en real estate tokenizado para inversores", time: "30 min", premium: true, src: "FinPulse Research" },
-  { id: 10, cat: "Startups", title: "Ronda de inversión récord en fintech argentina supera USD 50M", time: "35 min", premium: false, src: "TechCrunch" }
+const RSS_SOURCES = [
+  { url: "https://www.ambito.com/rss/pages/economia.xml", cat: "Argentina", src: "Ámbito" },
+  { url: "https://www.infobae.com/feeds/rss/economia.xml", cat: "Macro", src: "Infobae" },
+  { url: "https://www.coindesk.com/arc/outboundfeeds/rss/", cat: "Crypto", src: "CoinDesk" },
+  { url: "https://www.cronista.com/rss/ultimas-noticias/", cat: "Mercados", src: "El Cronista" },
+  { url: "https://www.iproup.com/rss/economia-online/", cat: "Argentina", src: "iProUP" },
+  { url: "https://es.cointelegraph.com/rss", cat: "Crypto", src: "CoinTelegraph" }
 ];
+
+function relativeTime(ms) {
+  const diff = Math.floor((Date.now() - ms) / 60000);
+  if (diff < 1) return "ahora";
+  if (diff < 60) return diff + " min";
+  return Math.floor(diff / 60) + " h";
+}
+
+async function fetchNewsFeed() {
+  const results = await Promise.all(
+    RSS_SOURCES.map(async (source) => {
+      try {
+        const apiUrl = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(source.url);
+        const res = await fetch(apiUrl);
+        if (!res.ok) return [];
+        const data = await res.json();
+        if (data.status !== "ok" || !Array.isArray(data.items)) return [];
+        return data.items.map((item) => ({
+          cat: source.cat,
+          title: (item.title || "").trim(),
+          premium: false,
+          src: source.src,
+          url: item.link || "",
+          pubDate: new Date(item.pubDate).getTime() || 0
+        }));
+      } catch {
+        return [];
+      }
+    })
+  );
+  return results
+    .flat()
+    .filter((item) => item.title)
+    .sort((a, b) => b.pubDate - a.pubDate)
+    .slice(0, 40)
+    .map((item, i) => ({ ...item, id: i + 1, time: relativeTime(item.pubDate) }));
+}
 
 const INVESTOR_PROFILES = [
   { id: 1, name: "Martín Rodríguez", av: "MR", loc: "Buenos Aires, AR", interests: ["Crypto", "Startups"], bio: "Inversor ángel, 8 años exp. Busco co-inversores para rondas seed.", range: "USD 50K-200K", verified: true, compat: 92 },
@@ -528,6 +561,8 @@ export default function Dashboard() {
   const [prices, setPrices] = useState({});
   const [cryptoPrices, setCryptoPrices] = useState({});
   const [cryptoLoading, setCryptoLoading] = useState(true);
+  const [newsFeed, setNewsFeed] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(true);
   const [curInv, setCurInv] = useState(0);
   const [matches, setMatches] = useState([]);
   const [feedFilter, setFeedFilter] = useState("Todos");
@@ -561,6 +596,18 @@ export default function Dashboard() {
   useEffect(() => { fetchCrypto(); const iv = setInterval(fetchCrypto, 60000); return () => clearInterval(iv); }, [fetchCrypto]);
 
   useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setNewsLoading(true);
+      const items = await fetchNewsFeed();
+      if (!cancelled) { setNewsFeed(items); setNewsLoading(false); }
+    };
+    load();
+    const iv = setInterval(load, 300000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, []);
+
+  useEffect(() => {
     const all = [...CURRENCIES, ...INDICES, ...COMMODITIES];
     const gen = (b) => b + ((Math.random() - 0.5) * 2 * b * 0.0003);
     const update = () => {
@@ -587,7 +634,7 @@ export default function Dashboard() {
     else if (u === "CRYPTO") {
       const lines = Object.entries(cryptoPrices).map(([id, d]) => { const m = CRYPTO_MAP[id]; if (!m) return ""; return m.symbol + "  $" + (d.usd || 0).toLocaleString(undefined, { maximumFractionDigits: 2 }) + "  " + ((d.usd_24h_change || 0) >= 0 ? "+" : "") + (d.usd_24h_change || 0).toFixed(2) + "%"; }).filter(Boolean);
       r = "[CoinGecko API]\n" + lines.join("\n");
-    } else if (u === "NEWS") r = NEWS_FEED.slice(0, 5).map((n) => "[" + n.cat + "] " + n.title).join("\n");
+    } else if (u === "NEWS") r = newsFeed.slice(0, 5).map((n) => "[" + n.cat + "] " + n.title).join("\n") || "Sin noticias cargadas aún.";
     else if (u === "CLEAR") { setTermH([{ type: "sys", text: "Terminal limpiada." }]); return; }
     else if (u.startsWith("QUOTE")) {
       const tk = u.replace("QUOTE", "").trim();
@@ -603,7 +650,7 @@ export default function Dashboard() {
     setShowPay(false);
   };
 
-  const filteredNews = feedFilter === "Todos" ? NEWS_FEED : NEWS_FEED.filter((n) => n.cat === feedFilter);
+  const filteredNews = feedFilter === "Todos" ? newsFeed : newsFeed.filter((n) => n.cat === feedFilter);
 
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: "◈" },
@@ -634,6 +681,7 @@ export default function Dashboard() {
         input::placeholder, textarea::placeholder { color: #4a5c7a } select { color-scheme: dark }
         @keyframes tk { 0% { transform: translateX(0) } 100% { transform: translateX(-50%) } }
         @keyframes pls { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
+        @keyframes spin { to { transform: rotate(360deg) } }
         @media (max-width: 767px) {
           .fp-nav-btn { font-size: 9px !important; padding: 4px 7px !important; }
           .fp-header-actions { flex-direction: column !important; align-items: flex-end !important; }
@@ -808,24 +856,35 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 10 }}>
-              {filteredNews.map((item) => {
-                const catColors = { Mercados: X.blu, Crypto: X.pur, Argentina: X.cyn, Análisis: X.acc, Commodities: X.grn, FX: X.acc, Oportunidades: X.grn, Macro: X.blu, "Real Estate": X.cyn, Startups: X.pur };
-                return (
-                  <div key={item.id} style={{ background: X.bg2, borderRadius: 10, border: "1px solid " + X.brd, padding: 14, position: "relative", overflow: "hidden", cursor: "pointer", transition: "all 0.2s" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = X.brdH; e.currentTarget.style.background = X.bgH; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = X.brd; e.currentTarget.style.background = X.bg2; }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 7 }}>
-                      <Bdg color={catColors[item.cat] || X.acc}>{item.cat}</Bdg>
-                      {item.premium && <Bdg color={X.acc}>★ PRO</Bdg>}
-                      <span style={{ marginLeft: "auto", fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: X.t3 }}>Hace {item.time}</span>
-                    </div>
-                    <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 13, fontWeight: 600, color: X.t1, lineHeight: 1.4 }}>{item.title}</div>
-                    <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 9, color: X.t3, marginTop: 6 }}>Fuente: {item.src}</div>
-                  </div>
-                );
-              })}
-            </div>
+            {newsLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 0", gap: 14 }}>
+                <div style={{ width: 30, height: 30, border: "2px solid " + X.brd, borderTopColor: X.acc, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 12, color: X.t3 }}>Cargando noticias...</span>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 10 }}>
+                {filteredNews.length === 0 ? (
+                  <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 13, color: X.t3, padding: "40px 0" }}>No hay noticias en esta categoría.</div>
+                ) : filteredNews.map((item) => {
+                  const catColors = { Mercados: X.blu, Crypto: X.pur, Argentina: X.cyn, Análisis: X.acc, Commodities: X.grn, FX: X.acc, Oportunidades: X.grn, Macro: X.blu, "Real Estate": X.cyn, Startups: X.pur };
+                  return (
+                    <a key={item.id} href={item.url || "#"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block" }}>
+                      <div style={{ background: X.bg2, borderRadius: 10, border: "1px solid " + X.brd, padding: 14, position: "relative", overflow: "hidden", cursor: "pointer", transition: "all 0.2s" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = X.brdH; e.currentTarget.style.background = X.bgH; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = X.brd; e.currentTarget.style.background = X.bg2; }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 7 }}>
+                          <Bdg color={catColors[item.cat] || X.acc}>{item.cat}</Bdg>
+                          {item.premium && <Bdg color={X.acc}>★ PRO</Bdg>}
+                          <span style={{ marginLeft: "auto", fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: X.t3 }}>Hace {item.time}</span>
+                        </div>
+                        <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 13, fontWeight: 600, color: X.t1, lineHeight: 1.4 }}>{item.title}</div>
+                        <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 9, color: X.t3, marginTop: 6 }}>Fuente: {item.src}</div>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
