@@ -62,19 +62,25 @@ async function fetchNewsFeed() {
   const results = await Promise.all(
     RSS_SOURCES.map(async (source) => {
       try {
-        const apiUrl = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(source.url);
-        const res = await fetch(apiUrl);
+        const proxyUrl = "/api/rss?url=" + encodeURIComponent(source.url);
+        const res = await fetch(proxyUrl);
         if (!res.ok) return [];
-        const data = await res.json();
-        if (data.status !== "ok" || !Array.isArray(data.items)) return [];
-        return data.items.map((item) => ({
-          cat: source.cat,
-          title: (item.title || "").trim(),
-          premium: false,
-          src: source.src,
-          url: item.link || "",
-          pubDate: new Date(item.pubDate).getTime() || 0
-        }));
+        const xml = await res.text();
+        const doc = new DOMParser().parseFromString(xml, "application/xml");
+        const items = Array.from(doc.querySelectorAll("item"));
+        return items.map((item) => {
+          const title = item.querySelector("title")?.textContent?.trim() || "";
+          const link = item.querySelector("link")?.textContent?.trim() || "";
+          const pubDate = item.querySelector("pubDate")?.textContent?.trim() || "";
+          return {
+            cat: source.cat,
+            title,
+            premium: false,
+            src: source.src,
+            url: link,
+            pubDate: new Date(pubDate).getTime() || 0
+          };
+        });
       } catch {
         return [];
       }
