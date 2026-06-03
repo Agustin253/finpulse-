@@ -738,6 +738,12 @@ export default function FinPulseApp() {
         input::placeholder, textarea::placeholder { color: #4a5c7a } select { color-scheme: dark }
         @keyframes tk { 0% { transform: translateX(0) } 100% { transform: translateX(-50%) } }
         @keyframes pls { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
+        @media (max-width: 767px) {
+          .fp-nav-btn { font-size: 9px !important; padding: 4px 7px !important; }
+          .fp-header-actions { flex-direction: column !important; align-items: flex-end !important; }
+          .fp-terminal-btn { display: none !important; }
+          .fp-terminal { display: none !important; }
+        }
       `}</style>
 
       {/* Ticker */}
@@ -761,14 +767,14 @@ export default function FinPulseApp() {
           </div>
           <nav style={{ display: "flex", gap: 2 }}>
             {navItems.map((it) => (
-              <button key={it.id} onClick={() => setView(it.id)} style={{ padding: "6px 12px", borderRadius: 7, border: "none", background: view === it.id ? X.acc + "22" : "transparent", color: view === it.id ? X.acc : X.t2, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit',sans-serif", display: "flex", alignItems: "center", gap: 4 }}>
+              <button key={it.id} onClick={() => setView(it.id)} className="fp-nav-btn" style={{ padding: "6px 12px", borderRadius: 7, border: "none", background: view === it.id ? X.acc + "22" : "transparent", color: view === it.id ? X.acc : X.t2, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit',sans-serif", display: "flex", alignItems: "center", gap: 4 }}>
                 <span style={{ fontSize: 12 }}>{it.icon}</span>{it.label}
               </button>
             ))}
           </nav>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button onClick={() => setShowTerm(!showTerm)} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid " + X.brd, background: showTerm ? X.grn + "22" : "transparent", color: showTerm ? X.grn : X.t2, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "'JetBrains Mono',monospace" }}>▸ Terminal</button>
+        <div className="fp-header-actions" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={() => setShowTerm(!showTerm)} className="fp-terminal-btn" style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid " + X.brd, background: showTerm ? X.grn + "22" : "transparent", color: showTerm ? X.grn : X.t2, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "'JetBrains Mono',monospace" }}>▸ Terminal</button>
           {isSub && (
             <div style={{ position: "relative" }}>
               <button onClick={() => setShowNotif(!showNotif)} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid " + X.brd, background: showNotif ? X.acc + "22" : "transparent", color: showNotif ? X.acc : X.t2, fontSize: 14, cursor: "pointer", position: "relative" }}>
@@ -791,7 +797,7 @@ export default function FinPulseApp() {
 
       {/* Terminal */}
       {showTerm && (
-        <div style={{ background: "#000", borderBottom: "1px solid " + X.grn + "33", padding: "8px 18px", maxHeight: 200 }}>
+        <div className="fp-terminal" style={{ background: "#000", borderBottom: "1px solid " + X.grn + "33", padding: "8px 18px", maxHeight: 200 }}>
           <div ref={termRef} style={{ height: 150, overflowY: "auto", fontFamily: "'JetBrains Mono',monospace", fontSize: 11 }}>
             {termH.map((entry, i) => (
               <div key={i} style={{ color: entry.type === "sys" ? X.grn : entry.type === "usr" ? X.acc : X.t1, marginBottom: 2, whiteSpace: "pre-wrap" }}>
