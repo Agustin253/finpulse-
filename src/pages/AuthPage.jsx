@@ -26,12 +26,13 @@ export default function AuthPage({ mode }) {
     try {
       if (isLogin) {
         await signIn(form.email, form.password)
+        navigate('/app')
       } else {
         if (!form.fullName.trim()) { setError('El nombre es requerido'); setLoading(false); return }
         if (form.password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres'); setLoading(false); return }
         await signUp(form.email, form.password, form.fullName.trim())
+        navigate('/onboarding')
       }
-      navigate('/app')
     } catch (err) {
       setError(err.message || 'Ocurrió un error. Intentá de nuevo.')
     } finally {

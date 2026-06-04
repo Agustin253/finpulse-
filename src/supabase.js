@@ -6,7 +6,35 @@ export const supabase = createClient(
 )
 
 /*
-  Required Supabase table (run in SQL editor):
+  Required Supabase tables (run in SQL editor):
+
+  -- investor_profiles (onboarding data)
+  CREATE TABLE public.investor_profiles (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
+    full_name TEXT,
+    location TEXT,
+    bio TEXT,
+    invest_range TEXT,
+    interests TEXT[],
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  ALTER TABLE public.investor_profiles ENABLE ROW LEVEL SECURITY;
+
+  CREATE POLICY "Users can read own investor profile"
+    ON public.investor_profiles FOR SELECT
+    USING (auth.uid() = user_id);
+
+  CREATE POLICY "Users can insert own investor profile"
+    ON public.investor_profiles FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+  CREATE POLICY "Users can update own investor profile"
+    ON public.investor_profiles FOR UPDATE
+    USING (auth.uid() = user_id);
+
+  -- profiles table
 
   CREATE TABLE public.profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,

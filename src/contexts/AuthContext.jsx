@@ -6,6 +6,7 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
+  const [investorProfile, setInvestorProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -45,7 +46,10 @@ export function AuthProvider({ children }) {
       console.log('[FinPulse] trial_start:', data.trial_start, '| days left:', daysLeft)
     }
 
+    const { data: invData } = await supabase.from('investor_profiles').select('*').eq('user_id', userId).maybeSingle()
+
     setProfile(data)
+    setInvestorProfile(invData ?? null)
     setLoading(false)
   }
 
@@ -104,8 +108,10 @@ export function AuthProvider({ children }) {
     return Math.max(0, Math.ceil((end - new Date()) / 86400000))
   }
 
+  const onboardingDone = !!investorProfile
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, signOut, subscribe, isTrialActive, trialDaysLeft }}>
+    <AuthContext.Provider value={{ user, profile, investorProfile, setInvestorProfile, onboardingDone, loading, signUp, signIn, signOut, subscribe, isTrialActive, trialDaysLeft }}>
       {children}
     </AuthContext.Provider>
   )
