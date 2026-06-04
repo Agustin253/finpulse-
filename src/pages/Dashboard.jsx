@@ -49,7 +49,11 @@ const RSS_SOURCES = [
   { url: "https://www.lanacion.com.ar/arc/outboundfeeds/rss/category/economia/", cat: "Mercados", src: "La Nación" },
   { url: "https://www.clarin.com/rss/economia/", cat: "Mercados", src: "Clarín" },
   { url: "https://www.fxstreet.com/rss/news", cat: "FX", src: "FXStreet" },
-  { url: "https://feeds.feedburner.com/TechCrunch", cat: "Startups", src: "TechCrunch" }
+  { url: "https://techcrunch.com/feed/", cat: "Startups", src: "TechCrunch" },
+  { url: "https://venturebeat.com/feed/", cat: "Startups", src: "VentureBeat" },
+  { url: "https://www.wired.com/feed/rss", cat: "Startups", src: "Wired" },
+  { url: "https://www.realestate.com.au/news/feed/", cat: "Real Estate", src: "RealEstate.com" },
+  { url: "https://www.biznews.com/feed", cat: "Real Estate", src: "BizNews" }
 ];
 
 function relativeTime(ms) {
