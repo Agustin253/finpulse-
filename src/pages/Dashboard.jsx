@@ -282,14 +282,18 @@ function NotifPanel({ notifications, onRead, onReadAll }) {
   );
 }
 
+const INVEST_RANGE_LABELS = {
+  lt1k: "Menos de USD 1,000",
+  "1k-10k": "USD 1,000 – 10,000",
+  "10k-50k": "USD 10,000 – 50,000",
+  "50k-200k": "USD 50,000 – 200,000",
+  gt200k: "Más de USD 200,000",
+};
+
 /* ═══ PROFILE PAGE ═══ */
-function ProfilePage({ userName, userEmail, trialDaysLeft, isSubscribed }) {
-  const stats = [
-    { label: "Matches", value: "12", icon: "⬡" },
-    { label: "Mensajes", value: "48", icon: "💬" },
-    { label: "Alertas", value: "6", icon: "🔔" },
-    { label: "Días activo", value: "34", icon: "📅" }
-  ];
+function ProfilePage({ userEmail, trialDaysLeft, isSubscribed }) {
+  const { profile, investorProfile } = useAuth();
+  const userName = profile?.full_name || userEmail?.split("@")[0] || "";
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto" }}>
@@ -305,20 +309,41 @@ function ProfilePage({ userName, userEmail, trialDaysLeft, isSubscribed }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
             <div>
               <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: 22, color: X.t1 }}>{userName}</div>
-              <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 13, color: X.t2 }}>{userEmail}</div>
+              {investorProfile?.location && (
+                <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 12, color: X.t3, marginTop: 2 }}>📍 {investorProfile.location}</div>
+              )}
+              <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 13, color: X.t2, marginTop: 2 }}>{userEmail}</div>
             </div>
             <Bdg color={X.grn}>★ PRO</Bdg>
           </div>
+          {investorProfile?.bio && (
+            <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 13, color: X.t2, lineHeight: 1.6, marginTop: 16, paddingTop: 16, borderTop: "1px solid " + X.brd }}>
+              {investorProfile.bio}
+            </div>
+          )}
+          {investorProfile?.interests?.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 10, fontWeight: 600, color: X.t3, letterSpacing: "0.06em", marginBottom: 8 }}>SECTORES DE INTERÉS</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {investorProfile.interests.map((s) => (
+                  <Bdg key={s} color={X.cyn}>{s}</Bdg>
+                ))}
+              </div>
+            </div>
+          )}
+          {investorProfile?.invest_range && (
+            <div style={{ marginTop: 14, display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 7, background: X.acc + "11", border: "1px solid " + X.acc + "33" }}>
+              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 600, color: X.acc }}>
+                💰 {INVEST_RANGE_LABELS[investorProfile.invest_range] || investorProfile.invest_range}
+              </span>
+            </div>
+          )}
+          {!investorProfile && (
+            <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 12, color: X.t3, marginTop: 16 }}>
+              Completá tu perfil inversor para ver tu información aquí.
+            </div>
+          )}
         </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
-        {stats.map((s) => (
-          <div key={s.label} style={{ background: X.bg2, borderRadius: 12, border: "1px solid " + X.brd, padding: "16px 14px", textAlign: "center" }}>
-            <div style={{ fontSize: 20, marginBottom: 6 }}>{s.icon}</div>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 22, fontWeight: 700, color: X.t1 }}>{s.value}</div>
-            <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 10, color: X.t3, marginTop: 2 }}>{s.label}</div>
-          </div>
-        ))}
       </div>
       <div style={{ background: X.bg2, borderRadius: 14, border: "1px solid " + X.grn + "33", padding: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1033,7 +1058,6 @@ export default function Dashboard() {
         {/* PROFILE */}
         {view === "profile" && (
           <ProfilePage
-            userName={userName}
             userEmail={user?.email}
             trialDaysLeft={daysLeft}
             isSubscribed={isSubscribed}

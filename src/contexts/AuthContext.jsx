@@ -121,7 +121,7 @@ export function AuthProvider({ children }) {
   const onboardingDone = !!investorProfile
 
   return (
-    <AuthContext.Provider value={{ user, profile, investorProfile, setInvestorProfile, onboardingDone, loading, signUp, signIn, signOut, subscribe, isTrialActive, trialDaysLeft }}>
+    <AuthContext.Provider value={{ user, profile, setProfile, investorProfile, setInvestorProfile, onboardingDone, loading, signUp, signIn, signOut, subscribe, isTrialActive, trialDaysLeft }}>
       {children}
     </AuthContext.Provider>
   )

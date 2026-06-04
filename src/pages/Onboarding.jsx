@@ -27,7 +27,7 @@ const STEP_LABELS = ['Tu perfil', 'Inversiones', 'Confirmar']
 
 export default function Onboarding() {
   const navigate = useNavigate()
-  const { user, profile, setInvestorProfile } = useAuth()
+  const { user, profile, setProfile, setInvestorProfile } = useAuth()
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -79,7 +79,9 @@ export default function Onboarding() {
       })
       if (insErr) throw insErr
 
-      await supabase.from('profiles').update({ full_name: form.full_name.trim() }).eq('id', user.id)
+      const { error: profErr } = await supabase.from('profiles').update({ full_name: form.full_name.trim() }).eq('id', user.id)
+      if (profErr) throw profErr
+      setProfile(p => ({ ...p, full_name: form.full_name.trim() }))
       setInvestorProfile({ user_id: user.id, ...form })
       navigate('/app', { replace: true })
     } catch (err) {
