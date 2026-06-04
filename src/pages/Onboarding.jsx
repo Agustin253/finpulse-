@@ -69,6 +69,7 @@ export default function Onboarding() {
     setError('')
     try {
       const { error: insErr } = await supabase.from('investor_profiles').insert({
+        id: user.id,
         user_id: user.id,
         full_name: form.full_name.trim(),
         location: form.location.trim(),
