@@ -514,6 +514,137 @@ function RecommendationsPanel() {
   );
 }
 
+/* ═══ FINMATCH VIEW ═══ */
+function calcCompat(userInterests, investorInterests) {
+  const uInterests = userInterests || [];
+  const iInterests = investorInterests || [];
+  if (!uInterests.length || !iInterests.length) {
+    return 50 + (iInterests.length * 11 % 42);
+  }
+  const shared = uInterests.filter((i) => iInterests.includes(i)).length;
+  const total = new Set([...uInterests, ...iInterests]).size;
+  return Math.round((shared / total) * 100);
+}
+
+function FinMatchView() {
+  const { user, profile } = useAuth();
+  const [investorProfiles, setInvestorProfiles] = useState([]);
+  const [dbMatches, setDbMatches] = useState([]);
+  const [curInv, setCurInv] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    async function load() {
+      setLoading(true);
+
+      let { data: profiles } = await supabase.from("investor_profiles").select("*");
+
+      if (!profiles || profiles.length === 0) {
+        const seedData = INVESTOR_PROFILES.map(({ compat, id, ...p }) => p);
+        const { data: seeded } = await supabase.from("investor_profiles").insert(seedData).select();
+        profiles = seeded || [];
+      }
+
+      const { data: matchRows } = await supabase
+        .from("matches")
+        .select("matched_user_id")
+        .eq("user_id", user.id);
+
+      const matchedIds = new Set((matchRows || []).map((m) => m.matched_user_id));
+      const userInterests = profile?.interests || [];
+      const all = profiles || [];
+
+      setInvestorProfiles(
+        all
+          .filter((p) => !matchedIds.has(p.id))
+          .map((p) => ({ ...p, compat: calcCompat(userInterests, p.interests) }))
+      );
+      setDbMatches(
+        all
+          .filter((p) => matchedIds.has(p.id))
+          .map((p) => ({ ...p, compat: calcCompat(userInterests, p.interests) }))
+      );
+      setCurInv(0);
+      setLoading(false);
+    }
+    load();
+  }, [user, profile]);
+
+  const handleConnect = async (p) => {
+    if (!user) return;
+    await supabase.from("matches").insert({ user_id: user.id, matched_user_id: p.id });
+    setDbMatches((prev) => [...prev, p]);
+    setCurInv((c) => c + 1);
+  };
+
+  const currentProfile = investorProfiles[curInv];
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 0", gap: 14 }}>
+        <div style={{ width: 30, height: 30, border: "2px solid " + X.brd, borderTopColor: X.acc, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <span style={{ fontFamily: "'Outfit',sans-serif", fontSize: 12, color: X.t3 }}>Cargando perfiles...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <h1 style={{ fontWeight: 800, fontSize: 24, marginBottom: 4 }}>Fin<span style={{ color: X.acc }}>Match</span></h1>
+        <p style={{ color: X.t2, fontSize: 12 }}>Conectá con inversores afines</p>
+      </div>
+      {currentProfile ? (
+        <div style={{ background: X.bg2, borderRadius: 14, border: "1px solid " + X.brd, padding: 22, maxWidth: 360, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "linear-gradient(135deg," + X.acc + "," + X.pur + ")", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#000" }}>
+              {currentProfile.av || (currentProfile.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ fontWeight: 700, fontSize: 16 }}>{currentProfile.name}</span>
+                {currentProfile.verified && <span style={{ fontSize: 12, color: X.grn }}>✓</span>}
+              </div>
+              <div style={{ fontSize: 11, color: X.t2 }}>{currentProfile.loc}</div>
+            </div>
+            <div style={{ marginLeft: "auto", fontFamily: "'JetBrains Mono',monospace", fontSize: 18, fontWeight: 700, color: currentProfile.compat >= 85 ? X.grn : X.acc }}>{currentProfile.compat}%</div>
+          </div>
+          <div style={{ fontSize: 12, color: X.t2, lineHeight: 1.6, marginBottom: 12 }}>{currentProfile.bio}</div>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
+            {(currentProfile.interests || []).map((interest) => <Bdg key={interest} color={X.cyn}>{interest}</Bdg>)}
+          </div>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: X.acc, marginBottom: 16, padding: "6px 8px", background: X.acc + "11", borderRadius: 6 }}>💰 {currentProfile.range}</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <ActionBtn onClick={() => setCurInv((c) => c + 1)} style={{ flex: 1 }}>✕ Pasar</ActionBtn>
+            <ActionBtn primary onClick={() => handleConnect(currentProfile)} style={{ flex: 1 }}>★ Conectar</ActionBtn>
+          </div>
+        </div>
+      ) : (
+        <div style={{ textAlign: "center", padding: 30, color: X.t2 }}>
+          <div style={{ fontSize: 40, marginBottom: 8 }}>✨</div>
+          <p>Revisaste todos los perfiles.</p>
+          <ActionBtn onClick={() => setCurInv(0)} style={{ marginTop: 12 }}>Volver a ver</ActionBtn>
+        </div>
+      )}
+      {dbMatches.length > 0 && (
+        <div style={{ marginTop: 30, maxWidth: 560, margin: "30px auto 0" }}>
+          <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}><span style={{ color: X.grn }}>★</span> Matches ({dbMatches.length})</h3>
+          {dbMatches.map((m) => (
+            <div key={m.id} style={{ background: X.bg2, borderRadius: 10, border: "1px solid " + X.grn + "33", padding: 12, display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg," + X.grn + "," + X.cyn + ")", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, color: "#000" }}>
+                {m.av || (m.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+              </div>
+              <div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 12 }}>{m.name}</div><div style={{ fontSize: 9, color: X.t3 }}>{m.loc}</div></div>
+              <ActionBtn style={{ padding: "4px 10px", fontSize: 10 }}>💬 Chat</ActionBtn>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ═══ PAYMENT MODAL ═══ */
 function PaymentModal({ onClose, onSuccess }) {
   const [processing, setProcessing] = useState(false);
@@ -570,8 +701,6 @@ export default function Dashboard() {
   const [cryptoLoading, setCryptoLoading] = useState(true);
   const [newsFeed, setNewsFeed] = useState([]);
   const [newsLoading, setNewsLoading] = useState(true);
-  const [curInv, setCurInv] = useState(0);
-  const [matches, setMatches] = useState([]);
   const [feedFilter, setFeedFilter] = useState("Todos");
   const [showPay, setShowPay] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -896,59 +1025,7 @@ export default function Dashboard() {
         )}
 
         {/* FINMATCH */}
-        {view === "finmatch" && (
-          <div>
-            <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <h1 style={{ fontWeight: 800, fontSize: 24, marginBottom: 4 }}>Fin<span style={{ color: X.acc }}>Match</span></h1>
-              <p style={{ color: X.t2, fontSize: 12 }}>Conectá con inversores afines</p>
-            </div>
-            {curInv < INVESTOR_PROFILES.length ? (() => {
-              const p = INVESTOR_PROFILES[curInv];
-              return (
-                <div style={{ background: X.bg2, borderRadius: 14, border: "1px solid " + X.brd, padding: 22, maxWidth: 360, margin: "0 auto" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "linear-gradient(135deg," + X.acc + "," + X.pur + ")", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#000" }}>{p.av}</div>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <span style={{ fontWeight: 700, fontSize: 16 }}>{p.name}</span>
-                        {p.verified && <span style={{ fontSize: 12, color: X.grn }}>✓</span>}
-                      </div>
-                      <div style={{ fontSize: 11, color: X.t2 }}>{p.loc}</div>
-                    </div>
-                    <div style={{ marginLeft: "auto", fontFamily: "'JetBrains Mono',monospace", fontSize: 18, fontWeight: 700, color: p.compat >= 85 ? X.grn : X.acc }}>{p.compat}%</div>
-                  </div>
-                  <div style={{ fontSize: 12, color: X.t2, lineHeight: 1.6, marginBottom: 12 }}>{p.bio}</div>
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
-                    {p.interests.map((interest) => <Bdg key={interest} color={X.cyn}>{interest}</Bdg>)}
-                  </div>
-                  <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: X.acc, marginBottom: 16, padding: "6px 8px", background: X.acc + "11", borderRadius: 6 }}>💰 {p.range}</div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <ActionBtn onClick={() => setCurInv((c) => c + 1)} style={{ flex: 1 }}>✕ Pasar</ActionBtn>
-                    <ActionBtn primary onClick={() => { setMatches((m) => [...m, p]); setCurInv((c) => c + 1); }} style={{ flex: 1 }}>★ Conectar</ActionBtn>
-                  </div>
-                </div>
-              );
-            })() : (
-              <div style={{ textAlign: "center", padding: 30, color: X.t2 }}>
-                <div style={{ fontSize: 40, marginBottom: 8 }}>✨</div>
-                <p>Revisaste todos los perfiles.</p>
-                <ActionBtn onClick={() => setCurInv(0)} style={{ marginTop: 12 }}>Volver a ver</ActionBtn>
-              </div>
-            )}
-            {matches.length > 0 && (
-              <div style={{ marginTop: 30, maxWidth: 560, margin: "30px auto 0" }}>
-                <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}><span style={{ color: X.grn }}>★</span> Matches ({matches.length})</h3>
-                {matches.map((m) => (
-                  <div key={m.id} style={{ background: X.bg2, borderRadius: 10, border: "1px solid " + X.grn + "33", padding: 12, display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg," + X.grn + "," + X.cyn + ")", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, color: "#000" }}>{m.av}</div>
-                    <div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 12 }}>{m.name}</div><div style={{ fontSize: 9, color: X.t3 }}>{m.loc}</div></div>
-                    <ActionBtn style={{ padding: "4px 10px", fontSize: 10 }}>💬 Chat</ActionBtn>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {view === "finmatch" && <FinMatchView />}
 
         {/* CHAT */}
         {view === "chat" && <ChatView />}
