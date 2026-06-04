@@ -20,6 +20,8 @@ function LoadingScreen() {
 export default function App() {
   const { user, loading, onboardingDone, isTrialActive } = useAuth()
 
+  console.log('[FinPulse] App render — user:', user?.id ?? null, '| loading:', loading, '| onboardingDone:', onboardingDone)
+
   if (loading) return <LoadingScreen />
 
   return (

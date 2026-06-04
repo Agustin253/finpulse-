@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) loadProfile(session.user.id)
-      else { setProfile(null); setLoading(false) }
+      else { setProfile(null); setInvestorProfile(null); setLoading(false) }
     })
 
     return () => subscription.unsubscribe()
@@ -27,6 +27,7 @@ export function AuthProvider({ children }) {
 
   async function loadProfile(userId) {
     setLoading(true)
+    console.log('[FinPulse] loadProfile start — userId:', userId)
     let { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
 
     if (!data) {
@@ -46,10 +47,19 @@ export function AuthProvider({ children }) {
       console.log('[FinPulse] trial_start:', data.trial_start, '| days left:', daysLeft)
     }
 
-    const { data: invData } = await supabase.from('investor_profiles').select('*').eq('user_id', userId).maybeSingle()
+    const { data: invData, error: invError } = await supabase
+      .from('investor_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    console.log('[FinPulse] investor_profiles query — userId:', userId, '| data:', invData, '| error:', invError)
+
+    const resolvedInvProfile = invData ?? null
+    console.log('[FinPulse] onboardingDone will be:', !!resolvedInvProfile)
 
     setProfile(data)
-    setInvestorProfile(invData ?? null)
+    setInvestorProfile(resolvedInvProfile)
     setLoading(false)
   }
 
