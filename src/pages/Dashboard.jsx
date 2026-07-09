@@ -103,15 +103,26 @@ const INVESTOR_PROFILES = [
   { id: 5, name: "Diego Morales", av: "DM", loc: "Bogotá, CO", interests: ["Agro", "DeFi"], bio: "Fundador plataforma DeFi agro.", range: "USD 100K-500K", verified: true, compat: 71 }
 ];
 
-const CHAT_ROOMS = [
-  { id: "crypto", name: "Crypto & DeFi", icon: "₿", desc: "Bitcoin, altcoins, DeFi", users: 234, color: "#8b5cf6" },
-  { id: "forex", name: "Forex & Divisas", icon: "💱", desc: "Pares de divisas, carry trade", users: 156, color: "#3b82f6" },
-  { id: "acciones", name: "Acciones & Bolsa", icon: "📈", desc: "Renta variable, IPOs, earnings", users: 189, color: "#10b981" },
-  { id: "commodities", name: "Commodities", icon: "🛢️", desc: "Oro, petróleo, soja, energía", users: 98, color: "#f59e0b" },
-  { id: "realestate", name: "Real Estate", icon: "🏗️", desc: "Inmobiliario, REITs", users: 112, color: "#06b6d4" },
-  { id: "startups", name: "Startups & VC", icon: "🚀", desc: "Venture capital, rondas", users: 145, color: "#ec4899" },
-  { id: "argentina", name: "Mercado Argentino", icon: "🇦🇷", desc: "Merval, bonos, cedears, dólar", users: 321, color: "#6ee7b7" },
-  { id: "macro", name: "Macro & Economía", icon: "🌐", desc: "Política monetaria, inflación", users: 167, color: "#a78bfa" }
+const CHAT_COUNTRIES = [
+  { id: "argentina", name: "Argentina", flag: "🇦🇷" },
+  { id: "estados_unidos", name: "Estados Unidos", flag: "🇺🇸" },
+  { id: "brasil", name: "Brasil", flag: "🇧🇷" },
+  { id: "mexico", name: "México", flag: "🇲🇽" },
+  { id: "espana", name: "España", flag: "🇪🇸" },
+  { id: "paraguay", name: "Paraguay", flag: "🇵🇾" },
+  { id: "chile", name: "Chile", flag: "🇨🇱" },
+  { id: "colombia", name: "Colombia", flag: "🇨🇴" },
+  { id: "resto_mundo", name: "Resto del mundo", flag: "🌍" }
+];
+
+const CHAT_CATEGORY_GROUPS = [
+  { id: "finanzas", icon: "💰", name: "Finanzas e Inversión", topics: ["Inversores", "Bolsa/Crypto", "Busco inversión", "Busco invertir"], color: "#10b981" },
+  { id: "negocios", icon: "🚀", name: "Negocios", topics: ["Startups", "Socios", "Compra/venta empresas", "Oportunidades", "Ofrezco/Busco servicios"], color: "#f59e0b" },
+  { id: "sectores", icon: "🏢", name: "Sectores", topics: ["Inmuebles", "Construcción", "Industria", "Logística", "Agro", "Automotores"], color: "#3b82f6" },
+  { id: "tech", icon: "💻", name: "Tech y Digital", topics: ["Tecnología/IA", "E-commerce", "Gaming", "Creadores", "Productoras", "Marketing"], color: "#8b5cf6" },
+  { id: "servicios", icon: "⚖️", name: "Servicios Profesionales", topics: ["Abogados/Contadores", "Salud", "Educación"], color: "#06b6d4" },
+  { id: "lifestyle", icon: "☕", name: "Lifestyle", topics: ["Gastronomía", "Fitness", "Moda", "Turismo", "Música", "Mascotas"], color: "#ec4899" },
+  { id: "networking", icon: "💬", name: "Networking", topics: ["General", "Eventos"], color: "#6ee7b7" }
 ];
 
 
@@ -362,10 +373,40 @@ function ProfilePage({ userEmail, trialDaysLeft, isSubscribed }) {
   );
 }
 
+/* ═══ CHAT BREADCRUMB ═══ */
+function ChatBreadcrumb({ country, category, onRoot, onCountry }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+      <button onClick={onRoot}
+        style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: 14, color: country ? X.t3 : X.t1 }}>
+        💬 Salas
+      </button>
+      {country && (
+        <>
+          <span style={{ color: X.t3, fontSize: 12 }}>›</span>
+          <button onClick={onCountry} disabled={!category}
+            style={{ background: "none", border: "none", cursor: category ? "pointer" : "default", padding: 0, fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: 14, color: category ? X.t3 : X.t1 }}>
+            {country.flag} {country.name}
+          </button>
+        </>
+      )}
+      {category && (
+        <>
+          <span style={{ color: X.t3, fontSize: 12 }}>›</span>
+          <span style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: 14, color: X.t1 }}>
+            {category.icon} {category.name}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ═══ CHAT VIEW ═══ */
 function ChatView() {
   const { user, profile } = useAuth();
-  const [activeRoom, setActiveRoom] = useState(null);
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -373,9 +414,10 @@ function ChatView() {
   const channelRef = useRef(null);
 
   const username = profile?.full_name || user?.email?.split("@")[0] || "Anonymous";
+  const roomId = selectedCountry && selectedCategory ? `${selectedCountry}_${selectedCategory}` : null;
 
   useEffect(() => {
-    if (!activeRoom) {
+    if (!roomId) {
       setMessages([]);
       return;
     }
@@ -389,7 +431,7 @@ function ChatView() {
       const { data } = await supabase
         .from("messages")
         .select("*")
-        .eq("room_id", activeRoom)
+        .eq("room_id", roomId)
         .order("created_at", { ascending: true })
         .limit(50);
 
@@ -397,10 +439,10 @@ function ChatView() {
       setLoading(false);
 
       channel = supabase
-        .channel("room:" + activeRoom)
+        .channel("room:" + roomId)
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "messages", filter: `room_id=eq.${activeRoom}` },
+          { event: "INSERT", schema: "public", table: "messages", filter: `room_id=eq.${roomId}` },
           (payload) => { setMessages((prev) => [...prev, payload.new]); }
         )
         .subscribe();
@@ -416,59 +458,80 @@ function ChatView() {
         channelRef.current = null;
       }
     };
-  }, [activeRoom]);
+  }, [roomId]);
 
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const sendMsg = async () => {
-    if (!input.trim() || !activeRoom || !user) return;
+    if (!input.trim() || !roomId || !user) return;
     const text = input.trim();
     setInput("");
     await supabase.from("messages").insert({
-      room_id: activeRoom,
+      room_id: roomId,
       user_id: user.id,
       username,
       content: text,
     });
   };
 
-  const activeRoomData = CHAT_ROOMS.find((r) => r.id === activeRoom);
+  const countryData = CHAT_COUNTRIES.find((c) => c.id === selectedCountry);
+  const categoryData = CHAT_CATEGORY_GROUPS.find((c) => c.id === selectedCategory);
+
+  const goRoot = () => { setSelectedCountry(null); setSelectedCategory(null); };
+  const goCountry = () => setSelectedCategory(null);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: activeRoom ? "260px 1fr" : "1fr", gap: 0, background: X.bg2, borderRadius: 14, border: "1px solid " + X.brd, overflow: "hidden", height: "calc(100vh - 230px)", minHeight: 480 }}>
-      <div style={{ borderRight: activeRoom ? "1px solid " + X.brd : "none", overflow: "auto" }}>
-        <div style={{ padding: "14px 16px", borderBottom: "1px solid " + X.brd, position: "sticky", top: 0, background: X.bg2, zIndex: 1 }}>
-          <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: 14, color: X.t1 }}>💬 Salas</div>
-        </div>
-        <div style={{ display: activeRoom ? "block" : "grid", gridTemplateColumns: activeRoom ? undefined : "repeat(auto-fill,minmax(260px,1fr))", gap: activeRoom ? 0 : 8, padding: activeRoom ? 0 : 10 }}>
-          {CHAT_ROOMS.map((room) => (
-            <button key={room.id} onClick={() => setActiveRoom(room.id)}
-              style={{ display: "flex", alignItems: "center", gap: 10, padding: activeRoom ? "12px 16px" : "14px 16px", border: activeRoom ? "none" : "1px solid " + X.brd, borderRadius: activeRoom ? 0 : 10, borderBottom: activeRoom ? "1px solid " + X.brd + "08" : undefined, background: activeRoom === room.id ? X.bgH : "transparent", cursor: "pointer", width: "100%", textAlign: "left", transition: "all 0.15s" }}
-              onMouseEnter={(e) => { if (activeRoom !== room.id) e.currentTarget.style.background = X.bgH; }}
-              onMouseLeave={(e) => { if (activeRoom !== room.id) e.currentTarget.style.background = "transparent"; }}>
-              <div style={{ fontSize: activeRoom ? 18 : 24, width: activeRoom ? 28 : 38, height: activeRoom ? 28 : 38, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: room.color + "18" }}>{room.icon}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 600, fontSize: activeRoom ? 12 : 14, color: X.t1 }}>{room.name}</div>
-                <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: activeRoom ? 9 : 10, color: X.t3 }}>{room.desc}</div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                <div style={{ width: 5, height: 5, borderRadius: "50%", background: X.grn }} />
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: X.t3 }}>{room.users}</span>
-              </div>
-            </button>
-          ))}
-        </div>
+    <div style={{ display: "flex", flexDirection: "column", background: X.bg2, borderRadius: 14, border: "1px solid " + X.brd, overflow: "hidden", height: "calc(100vh - 230px)", minHeight: 480 }}>
+      <div style={{ padding: "14px 16px", borderBottom: "1px solid " + X.brd, display: "flex", alignItems: "center", gap: 10 }}>
+        {roomId && (
+          <button onClick={goCountry} style={{ background: "none", border: "none", color: X.t3, fontSize: 16, cursor: "pointer" }}>←</button>
+        )}
+        {!roomId && selectedCountry && (
+          <button onClick={goRoot} style={{ background: "none", border: "none", color: X.t3, fontSize: 16, cursor: "pointer" }}>←</button>
+        )}
+        <ChatBreadcrumb country={countryData} category={roomId ? categoryData : null} onRoot={goRoot} onCountry={goCountry} />
       </div>
-      {activeRoom && (
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "10px 16px", borderBottom: "1px solid " + X.brd, display: "flex", alignItems: "center", gap: 8, background: X.bg2 }}>
-            <button onClick={() => setActiveRoom(null)} style={{ background: "none", border: "none", color: X.t3, fontSize: 16, cursor: "pointer" }}>←</button>
-            <span style={{ fontSize: 16 }}>{activeRoomData?.icon}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: 13, color: X.t1 }}>{activeRoomData?.name}</div>
-              <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 9, color: X.grn }}>{activeRoomData?.users} online</div>
-            </div>
+
+      {/* LEVEL 1: COUNTRIES */}
+      {!selectedCountry && (
+        <div style={{ flex: 1, overflow: "auto", padding: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
+            {CHAT_COUNTRIES.map((c) => (
+              <button key={c.id} onClick={() => setSelectedCountry(c.id)}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px", border: "1px solid " + X.brd, borderRadius: 12, background: "transparent", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = X.bgH; e.currentTarget.style.borderColor = X.brdH; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = X.brd; }}>
+                <span style={{ fontSize: 28 }}>{c.flag}</span>
+                <span style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 600, fontSize: 14, color: X.t1 }}>{c.name}</span>
+              </button>
+            ))}
           </div>
+        </div>
+      )}
+
+      {/* LEVEL 2: CATEGORY GROUPS */}
+      {selectedCountry && !selectedCategory && (
+        <div style={{ flex: 1, overflow: "auto", padding: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 10 }}>
+            {CHAT_CATEGORY_GROUPS.map((cat) => (
+              <button key={cat.id} onClick={() => setSelectedCategory(cat.id)}
+                style={{ display: "flex", flexDirection: "column", gap: 8, padding: "16px", border: "1px solid " + X.brd, borderRadius: 12, background: "transparent", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = X.bgH; e.currentTarget.style.borderColor = cat.color; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = X.brd; }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ fontSize: 20, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: cat.color + "18" }}>{cat.icon}</div>
+                  <span style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: 13, color: X.t1 }}>{cat.name}</span>
+                </div>
+                <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 10, color: X.t3, lineHeight: 1.5 }}>{cat.topics.join(" · ")}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* LEVEL 3: CHAT ROOM */}
+      {roomId && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ flex: 1, overflow: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
             {loading && <div style={{ textAlign: "center", color: X.t3, fontSize: 12, padding: 20 }}>Cargando mensajes...</div>}
             {!loading && messages.length === 0 && <div style={{ textAlign: "center", color: X.t3, fontSize: 12, padding: 20 }}>Sé el primero en escribir en esta sala.</div>}
