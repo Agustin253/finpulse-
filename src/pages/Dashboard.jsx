@@ -512,17 +512,21 @@ function ChatView() {
       {/* LEVEL 2: CATEGORY GROUPS */}
       {selectedCountry && !selectedCategory && (
         <div style={{ flex: 1, overflow: "auto", padding: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
             {CHAT_CATEGORY_GROUPS.map((cat) => (
               <button key={cat.id} onClick={() => setSelectedCategory(cat.id)}
-                style={{ display: "flex", flexDirection: "column", gap: 8, padding: "16px", border: "1px solid " + X.brd, borderRadius: 12, background: "transparent", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}
+                style={{ display: "flex", flexDirection: "column", gap: 14, padding: "22px", border: "1px solid " + X.brd, borderRadius: 14, background: "transparent", cursor: "pointer", textAlign: "left", transition: "all 0.15s", minHeight: 150 }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = X.bgH; e.currentTarget.style.borderColor = cat.color; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = X.brd; }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ fontSize: 20, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: cat.color + "18" }}>{cat.icon}</div>
-                  <span style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: 13, color: X.t1 }}>{cat.name}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ fontSize: 24, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, background: cat.color + "18" }}>{cat.icon}</div>
+                  <span style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: 18, color: X.t1 }}>{cat.name}</span>
                 </div>
-                <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: 10, color: X.t3, lineHeight: 1.5 }}>{cat.topics.join(" · ")}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {cat.topics.map((topic) => (
+                    <span key={topic} style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 600, fontSize: 12, color: cat.color, background: cat.color + "18", padding: "6px 12px", borderRadius: 999 }}>{topic}</span>
+                  ))}
+                </div>
               </button>
             ))}
           </div>
