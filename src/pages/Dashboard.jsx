@@ -104,15 +104,15 @@ const INVESTOR_PROFILES = [
 ];
 
 const CHAT_COUNTRIES = [
-  { id: "argentina", name: "Argentina", flag: "🇦🇷" },
-  { id: "estados_unidos", name: "Estados Unidos", flag: "🇺🇸" },
-  { id: "brasil", name: "Brasil", flag: "🇧🇷" },
-  { id: "mexico", name: "México", flag: "🇲🇽" },
-  { id: "espana", name: "España", flag: "🇪🇸" },
-  { id: "paraguay", name: "Paraguay", flag: "🇵🇾" },
-  { id: "chile", name: "Chile", flag: "🇨🇱" },
-  { id: "colombia", name: "Colombia", flag: "🇨🇴" },
-  { id: "resto_mundo", name: "Resto del mundo", flag: "🌍" }
+  { id: "argentina", name: "Argentina", code: "ar" },
+  { id: "estados_unidos", name: "Estados Unidos", code: "us" },
+  { id: "brasil", name: "Brasil", code: "br" },
+  { id: "mexico", name: "México", code: "mx" },
+  { id: "espana", name: "España", code: "es" },
+  { id: "paraguay", name: "Paraguay", code: "py" },
+  { id: "chile", name: "Chile", code: "cl" },
+  { id: "colombia", name: "Colombia", code: "co" },
+  { id: "resto_mundo", name: "Resto del mundo", code: null }
 ];
 
 const CHAT_CATEGORY_GROUPS = [
@@ -386,7 +386,7 @@ function ChatBreadcrumb({ country, category, onRoot, onCountry }) {
           <span style={{ color: X.t3, fontSize: 12 }}>›</span>
           <button onClick={onCountry} disabled={!category}
             style={{ background: "none", border: "none", cursor: category ? "pointer" : "default", padding: 0, fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: 14, color: category ? X.t3 : X.t1 }}>
-            {country.flag} {country.name}
+            {country.code ? <img src={`https://flagcdn.com/16x12/${country.code}.png`} alt={country.name} style={{ width: 16, height: 12, borderRadius: 2, marginRight: 4 }} /> : '🌍'}{country.name}
           </button>
         </>
       )}
@@ -501,7 +501,7 @@ function ChatView() {
                 style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px", border: "1px solid " + X.brd, borderRadius: 12, background: "transparent", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = X.bgH; e.currentTarget.style.borderColor = X.brdH; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = X.brd; }}>
-                <span style={{ fontSize: 28 }}>{c.flag}</span>
+                {c.code ? <img src={`https://flagcdn.com/32x24/${c.code}.png`} alt={c.name} style={{ width: 32, height: 24, borderRadius: 3 }} /> : <span style={{ fontSize: 24 }}>🌍</span>}
                 <span style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 600, fontSize: 14, color: X.t1 }}>{c.name}</span>
               </button>
             ))}
